@@ -206,6 +206,7 @@
 		"storybook": "10.6.5",
 		"stylelint": "catalog:tooling",
 		"stylelint-scss": "^6.4.0",
+		"terser-webpack-plugin": "5.4.0",
 		"typescript": "5.7.x",
 		"utility-types": "3.10.0",
 		"webpack": "catalog:tooling",
