@@ -65,6 +65,7 @@ const ProductCategoriesBlock = ( {
 			isDropdown,
 			isHierarchical,
 			showChildrenOnly,
+			showOnlyTopLevel,
 		} = attributes;
 
 		return (
@@ -140,6 +141,19 @@ const ProductCategoriesBlock = ( {
 							setAttributes( { hasEmpty: ! hasEmpty } )
 						}
 					/>
+					<ToggleControl
+						label={ __(
+							'Show only top level categories',
+							'woocommerce'
+						) }
+						checked={ !! showOnlyTopLevel }
+						onChange={ ( value ) =>
+							setAttributes( {
+								showOnlyTopLevel: value,
+								...( value && { showChildrenOnly: false } ),
+							} )
+						}
+					/>
 					{ ( isSiteEditor || isWidgetEditor ) && (
 						<ToggleControl
 							label={ __(
@@ -154,6 +168,9 @@ const ProductCategoriesBlock = ( {
 							onChange={ () =>
 								setAttributes( {
 									showChildrenOnly: ! showChildrenOnly,
+									...( ! showChildrenOnly && {
+										showOnlyTopLevel: false,
+									} ),
 								} )
 							}
 						/>

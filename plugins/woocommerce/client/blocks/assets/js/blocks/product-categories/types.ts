@@ -6,6 +6,7 @@ export interface ProductCategoriesBlockProps {
 		isDropdown: boolean;
 		isHierarchical: boolean;
 		showChildrenOnly: boolean;
+		showOnlyTopLevel?: boolean;
 	};
 	name: string;
 	setAttributes: ( attributes: {
@@ -15,6 +16,7 @@ export interface ProductCategoriesBlockProps {
 		isDropdown?: boolean;
 		isHierarchical?: boolean;
 		showChildrenOnly?: boolean;
+		showOnlyTopLevel?: boolean;
 	} ) => void;
 }
 

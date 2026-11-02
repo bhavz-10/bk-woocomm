@@ -130,6 +130,108 @@ class ProductCategoriesTest extends WC_Unit_Test_Case {
 	}
 
 	/**
+	 * @testdox Should show only root categories in lists and dropdowns, regardless of hierarchy.
+	 * @testWith [false, false]
+	 *           [false, true]
+	 *           [true, false]
+	 *           [true, true]
+	 *
+	 * @param bool $is_dropdown     Whether to render a dropdown.
+	 * @param bool $is_hierarchical Whether to nest child categories.
+	 */
+	public function test_show_only_top_level( bool $is_dropdown, bool $is_hierarchical ): void {
+		$markup = $this->render_product_categories(
+			wp_json_encode(
+				array(
+					'showOnlyTopLevel' => true,
+					'isDropdown'       => $is_dropdown,
+					'isHierarchical'   => $is_hierarchical,
+				)
+			)
+		);
+
+		$this->assertStringContainsString( 'Clothing', $markup, 'Parents with products only in their children must remain visible.' );
+		$this->assertStringContainsString( 'Music', $markup );
+		$this->assertStringNotContainsString( 'Hoodies', $markup );
+		$this->assertStringNotContainsString( 'wc-block-product-categories-list--depth-1', $markup );
+
+		if ( $is_dropdown ) {
+			$this->assertSame( 3, substr_count( $markup, '<option' ) );
+		} else {
+			$this->assertSame( 2, substr_count( $markup, '<li' ) );
+		}
+	}
+
+	/**
+	 * @testdox Should preserve descendant product counts when showing only top-level categories.
+	 */
+	public function test_top_level_product_counts(): void {
+		$markup = $this->render_product_categories( '{"showOnlyTopLevel":true,"isDropdown":true}' );
+
+		$this->assertMatchesRegularExpression( '/Clothing\s*\(1\)/', $markup );
+		$this->assertMatchesRegularExpression( '/Music\s*\(1\)/', $markup );
+	}
+
+	/**
+	 * @testdox Should respect the empty-category setting while hiding all child categories.
+	 * @testWith [false]
+	 *           [true]
+	 *
+	 * @param bool $has_empty Whether to include empty categories.
+	 */
+	public function test_top_level_empty_categories( bool $has_empty ): void {
+		wp_insert_term( 'Empty child', 'product_cat', array( 'parent' => $this->hoodies_id ) );
+		$markup = $this->render_product_categories(
+			wp_json_encode(
+				array(
+					'showOnlyTopLevel' => true,
+					'hasEmpty'         => $has_empty,
+				)
+			)
+		);
+
+		if ( $has_empty ) {
+			$this->assertStringContainsString( '>Empty<', $markup );
+		} else {
+			$this->assertStringNotContainsString( '>Empty<', $markup );
+		}
+		$this->assertStringNotContainsString( '>Empty child<', $markup );
+		$this->assertStringNotContainsString( '>Hoodies<', $markup );
+	}
+
+	/**
+	 * @testdox Should give top-level-only precedence over children-only on category archives.
+	 * @testWith [false]
+	 *           [true]
+	 *
+	 * @param bool $top_level_only Whether to show only root categories.
+	 */
+	public function test_top_level_and_children_only_on_archive( bool $top_level_only ): void {
+		$clothing_id = get_term( $this->hoodies_id, 'product_cat' )->parent;
+		$this->go_to( get_term_link( $clothing_id, 'product_cat' ) );
+		$this->assertTrue( is_product_category() );
+
+		$markup = $this->render_product_categories(
+			wp_json_encode(
+				array(
+					'showChildrenOnly' => true,
+					'showOnlyTopLevel' => $top_level_only,
+				)
+			)
+		);
+
+		if ( $top_level_only ) {
+			$this->assertStringContainsString( '>Clothing<', $markup );
+			$this->assertStringContainsString( '>Music<', $markup );
+			$this->assertStringNotContainsString( '>Hoodies<', $markup );
+		} else {
+			$this->assertStringNotContainsString( '>Clothing<', $markup );
+			$this->assertStringNotContainsString( '>Music<', $markup );
+			$this->assertStringContainsString( '>Hoodies<', $markup );
+		}
+	}
+
+	/**
 	 * @testdox Should render nothing, without warnings, when the current category's children have no visible products.
 	 * @testWith ["hidden", "instock", "no"]
 	 *           ["visible", "outofstock", "yes"]

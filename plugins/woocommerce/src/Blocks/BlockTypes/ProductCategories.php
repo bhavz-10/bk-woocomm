@@ -26,6 +26,7 @@ class ProductCategories extends AbstractDynamicBlock {
 		'isDropdown'       => false,
 		'isHierarchical'   => true,
 		'showChildrenOnly' => false,
+		'showOnlyTopLevel' => false,
 	);
 
 	/**
@@ -45,6 +46,7 @@ class ProductCategories extends AbstractDynamicBlock {
 				'isDropdown'       => $this->get_schema_boolean( false ),
 				'isHierarchical'   => $this->get_schema_boolean( true ),
 				'showChildrenOnly' => $this->get_schema_boolean( false ),
+				'showOnlyTopLevel' => array( 'type' => 'boolean' ),
 				'textColor'        => $this->get_schema_string(),
 				'fontSize'         => $this->get_schema_string(),
 				'lineHeight'       => $this->get_schema_string(),
@@ -129,8 +131,9 @@ class ProductCategories extends AbstractDynamicBlock {
 	 * @return array
 	 */
 	protected function get_categories( $attributes ) {
-		$hierarchical  = wc_string_to_bool( $attributes['isHierarchical'] );
-		$children_only = wc_string_to_bool( $attributes['showChildrenOnly'] ) && is_product_category();
+		$hierarchical   = wc_string_to_bool( $attributes['isHierarchical'] );
+		$top_level_only = wc_string_to_bool( $attributes['showOnlyTopLevel'] ?? false );
+		$children_only  = ! $top_level_only && wc_string_to_bool( $attributes['showChildrenOnly'] ) && is_product_category();
 
 		if ( $children_only ) {
 			$term_id    = get_queried_object_id();
@@ -166,6 +169,11 @@ class ProductCategories extends AbstractDynamicBlock {
 					return 0 !== $category->count;
 				}
 			);
+		}
+
+		if ( $top_level_only ) {
+			// Keep descendants in the query so padded product counts include their products.
+			$categories = wp_list_filter( $categories, array( 'parent' => 0 ) );
 		}
 
 		if ( ! empty( $attributes['hasImage'] ) ) {

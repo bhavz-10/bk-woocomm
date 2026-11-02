@@ -60,6 +60,9 @@
 		"showChildrenOnly": {
 			"type": "boolean",
 			"default": false
+		},
+		"showOnlyTopLevel": {
+			"type": "boolean"
 		}
 	},
 	"example": {
