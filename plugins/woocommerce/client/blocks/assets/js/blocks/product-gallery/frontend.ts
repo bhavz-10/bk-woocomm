@@ -515,7 +515,11 @@ const productGallery = {
 			actions.selectImage( newImageIndex );
 		},
 		onViewerImageKeyDown: withSyncEvent( ( event: KeyboardEvent ) => {
-			if ( event.key === 'Enter' || event.key === ' ' ) {
+			const { fullScreenOnClick } = getContext();
+			if (
+				fullScreenOnClick &&
+				( event.key === 'Enter' || event.key === ' ' )
+			) {
 				if ( event.key === ' ' ) {
 					event.preventDefault();
 				}

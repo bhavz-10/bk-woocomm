@@ -18,16 +18,16 @@ const test = base.extend< {
 	pageObject: ProductGalleryPage;
 	beanieTemplate: ProductTemplate;
 } >( {
-	pageObject: async ( { page, editor, frontendUtils }, use ) => {
+	pageObject: async ( { page, editor, frontendUtils }, provide ) => {
 		const pageObject = new ProductGalleryPage( {
 			page,
 			editor,
 			frontendUtils,
 		} );
-		await use( pageObject );
+		await provide( pageObject );
 	},
-	beanieTemplate: async ( { createProductTemplate }, use ) => {
-		await use( await createProductTemplate( 'beanie' ) );
+	beanieTemplate: async ( { createProductTemplate }, provide ) => {
+		await provide( await createProductTemplate( 'beanie' ) );
 	},
 } );
 
@@ -257,6 +257,98 @@ test.describe( `${ blockData.name }`, () => {
 	} );
 
 	test.describe( 'open pop-up when clicked option', () => {
+		for ( const fullScreenOnClick of [ true, false ] ) {
+			for ( const hoverZoom of [ true, false ] ) {
+				test( `respects pop-up ${ fullScreenOnClick ? 'enabled' : 'disabled' } for keyboard activation with hover zoom ${ hoverZoom ? 'enabled' : 'disabled' }`, async ( {
+					pageObject,
+					page,
+					editor,
+					beanieTemplate,
+				} ) => {
+					await pageObject.addProductGalleryBlock( {
+						cleanContent: true,
+					} );
+					await editor.openDocumentSettingsSidebar();
+					await pageObject.toggleFullScreenOnClickSetting(
+						fullScreenOnClick
+					);
+					await pageObject.toggleZoomWhileHoveringSetting(
+						hoverZoom
+					);
+					await editor.saveSiteEditorEntities( {
+						isOnlyCurrentEntityDirty: true,
+					} );
+					await page.goto( beanieTemplate.productUrl );
+
+					const viewerBlock = await pageObject.getViewerBlock( {
+						page: 'frontend',
+					} );
+					const viewer = viewerBlock.locator(
+						'.wc-block-product-gallery-large-image__container'
+					);
+					const dialog = page.getByRole( 'dialog', {
+						includeHidden: true,
+					} );
+					const initialImageId = await pageObject.getViewerImageId();
+					expect( initialImageId ).not.toBeNull();
+					await viewer.press( 'ArrowRight' );
+					await expect( async () => {
+						expect( await pageObject.getViewerImageId() ).not.toBe(
+							initialImageId
+						);
+					} ).toPass( { timeout: 5_000 } );
+					await viewer.press( 'ArrowLeft' );
+					await expect( async () => {
+						expect( await pageObject.getViewerImageId() ).toBe(
+							initialImageId
+						);
+					} ).toPass( { timeout: 5_000 } );
+
+					for ( const key of [ 'Enter', 'Space' ] ) {
+						await test.step( key, async () => {
+							await page.goto( beanieTemplate.productUrl );
+							await viewer.press( key );
+							await expect( dialog ).toBeVisible( {
+								visible: fullScreenOnClick,
+							} );
+						} );
+					}
+				} );
+			}
+		}
+
+		test( 'keeps keyboard activation scoped to each gallery', async ( {
+			pageObject,
+			page,
+			editor,
+			beanieTemplate,
+		} ) => {
+			await pageObject.addProductGalleryBlock( { cleanContent: true } );
+			await editor.openDocumentSettingsSidebar();
+			await pageObject.toggleFullScreenOnClickSetting( false );
+			await pageObject.addProductGalleryBlock( { cleanContent: false } );
+			await editor.saveSiteEditorEntities( {
+				isOnlyCurrentEntityDirty: true,
+			} );
+			await page.goto( beanieTemplate.productUrl );
+
+			const galleries = page.locator(
+				'.wp-block-woocommerce-product-gallery'
+			);
+			await expect( galleries ).toHaveCount( 2 );
+			for ( const index of [ 0, 1 ] ) {
+				const gallery = galleries.nth( index );
+				await gallery
+					.locator(
+						'.wc-block-product-gallery-large-image__container'
+					)
+					.press( 'Enter' );
+				await expect( gallery.locator( 'dialog' ) ).toBeVisible( {
+					visible: index === 1,
+				} );
+			}
+		} );
+
 		test( 'enables pop-up by default and opens it on the frontend', async ( {
 			pageObject,
 			page,
